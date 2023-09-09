@@ -16,7 +16,9 @@ Rules-Requires-Root: no
 
 Package: linuxisocreator
 Architecture: all
-Depends: ${python3:Depends},
+Depends: debootstrap,
+         xorriso,
+         ${python3:Depends},
          ${misc:Depends}
 Suggests: linuxisocreator-doc
 Description: Linux ISO Creator

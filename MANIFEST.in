@@ -1,0 +1,2 @@
+include debian/changelog
+graft src/LinuxIsoCreator/ui*
