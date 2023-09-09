@@ -1,0 +1,6 @@
+linuxisocreator (0.0.1) stable; urgency=medium
+
+  * Initialize debian packaging (#1)
+  * Initial commit
+
+ -- Himadri Sekhar Basu <hsb10@iitbbs.ac.in>  Sat, 09 Sep 2023 09:57:40 +0530
