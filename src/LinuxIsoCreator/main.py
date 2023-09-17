@@ -24,9 +24,10 @@
 import argparse
 import gettext
 import locale
+import os
 import sys
 
-from LinuxIsoCreator.common import APP, LOCALE_DIR, __version__, LinuxIsoCreator
+from LinuxIsoCreator.common import APP, LOCALE_DIR, __version__, LinuxIsoCreator, logfile
 
 
 # i18n
@@ -35,13 +36,22 @@ gettext.bindtextdomain(APP, LOCALE_DIR)
 gettext.textdomain(APP)
 _ = gettext.gettext
 
-description =_('Creates custom Ubuntu/Debian Linux ISO from scratch.')
+description =_('Creates custom Ubuntu/Debian based Linux ISO from scratch.')
 
 def start_LinISOtorCli():
-	# generate password to stdout
-	# using configurations from config file
 	iso_creator = LinuxIsoCreator()
-	iso_creator.BootstrapRelease()
+	
+	ans = input(_("Bootstrap %s? ") % iso_creator.project_release)
+	if ans.lower() in 'yes':
+		iso_creator.BootstrapRelease()
+	
+	ans = input(_("Set up rootfs at %s? ") % iso_creator.rootfsdir)
+	if ans.lower() in 'yes':
+		iso_creator.setuprootfs()
+	
+	ans = input(_("Delete log file %s? ") % logfile)
+	if ans.lower() in 'yes':
+		os.system("rm -f %s" % logfile)
 
 
 if __name__ == "__main__":
