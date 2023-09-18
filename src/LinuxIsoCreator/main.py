@@ -24,10 +24,11 @@
 import argparse
 import gettext
 import locale
-import os
+import logging
 import sys
 
-from LinuxIsoCreator.common import APP, LOCALE_DIR, __version__, LinuxIsoCreator, logfile
+from LinuxIsoCreator.common import APP, LOCALE_DIR, LOGFILE, __version__
+from LinuxIsoCreator.cli import start_LinISOtorCli
 
 
 # i18n
@@ -38,20 +39,55 @@ _ = gettext.gettext
 
 description =_('Creates custom Ubuntu/Debian based Linux ISO from scratch.')
 
-def start_LinISOtorCli():
-	iso_creator = LinuxIsoCreator()
+# Parse arguments
+parser = argparse.ArgumentParser(prog=APP, description=description, conflict_handler='resolve')
+
+# parser.add_argument('', action='store_true', dest='start_window', default=True, help=("Start Theme Manager window"))
+parser.add_argument('-v', '--verbose', action='store_true', dest='show_debug', default=False, help=("Print debug messages to stdout i.e. terminal"))
+parser.add_argument('-V', '--version', action='store_true', dest='show_version', default=False, help=("Show version and exit"))
+
+args = parser.parse_args()
+args.start_window = True
+
+if args.show_version:
+    print("%s: version %s" % (APP, __version__))
+    sys.exit(0)
+
+# Create logger
+logger = logging.getLogger('LinuxIsoCreator')
+# Set logging level
+logger.setLevel(logging.DEBUG)
+# create log formatter
+log_format = logging.Formatter('%(message)s')
+
+# create file handler which logs only info messages
+fHandler = logging.FileHandler(LOGFILE)
+# Set level for FileHandler
+fHandler.setLevel(logging.DEBUG)
+
+# add formatter to the fHandler
+fHandler.setFormatter(log_format)
+
+# add the handler to the logger
+logger.addHandler(fHandler)
+
+if args.show_debug:
+	# create log formatter
+	log_format = logging.Formatter('%(asctime)s: %(message)s')
+	# be verbose only when "-v[erbose]" is supplied
+	# Create StreamHandler which logs even debug messages
+	cHandler = logging.StreamHandler()
+	# Set level for StreamHandler
+	cHandler.setLevel(logging.DEBUG)
 	
-	ans = input(_("Bootstrap %s? ") % iso_creator.project_release)
-	if ans.lower() in 'yes':
-		iso_creator.BootstrapRelease()
-	
-	ans = input(_("Set up rootfs at %s? ") % iso_creator.rootfsdir)
-	if ans.lower() in 'yes':
-		iso_creator.setuprootfs()
-	
-	ans = input(_("Delete log file %s? ") % logfile)
-	if ans.lower() in 'yes':
-		os.system("rm -f %s" % logfile)
+	# add formatter to the handler
+	cHandler.setFormatter(log_format)
+
+	# add the handler to the logger
+	logger.addHandler(cHandler)
+
+# module logger
+module_logger = logging.getLogger('LinuxIsoCreator.main')
 
 
 if __name__ == "__main__":

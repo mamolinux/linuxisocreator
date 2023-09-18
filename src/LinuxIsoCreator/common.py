@@ -25,6 +25,7 @@ import configparser
 import datetime
 import gettext
 import locale
+import logging
 import os
 import subprocess
 import sys
@@ -50,8 +51,10 @@ def create_logfile():
 
 # Set the log filename
 time_now = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-logfile = create_logfile()
-LOGFILE = open(logfile, "w")
+LOGFILE = create_logfile()
+
+# logger
+module_logger = logging.getLogger('LinuxIsoCreator.common')
 
 # get version
 version_file = os.path.abspath(os.path.dirname(__file__))+'/VERSION'
@@ -82,7 +85,7 @@ class LinuxIsoCreator():
 		
 		Saves user-defined configurations to config file.
 		If the config file does not exist, it creates a new config file
-		(~/.config/simple-pwgen/config.cfg)
+		(~/.config/linuxisocreator/config.cfg)
 		in user's home directory.
 		"""
 		if os.path.exists(CONFIG_FILE):
@@ -123,23 +126,27 @@ class LinuxIsoCreator():
 			self.lts = True
 		
 		if not self.project_name:
-			LOGFILE.write(_("Project Name should not be empty. Use a valid project name."))
-			print(_("Check the log %s for details.") % logfile)
+			module_logger.debug(_("Project Name should not be empty. Use a valid project name."))
+			module_logger.debug(_("Check the log %s for details.") % LOGFILE)
 			sys.exit(1)
 	
+	def capture_subprocess_output(self, cmd):
+		with open(LOGFILE, 'a+') as logger:
+			subprocess.run(cmd, stdout=logger, stderr=logger)
+	
 	def set_iso_env(self):
-		LOGFILE.write(_("Project Name: %s\n") % self.project_name)
-		LOGFILE.write(_("Version: %s\n") % self.project_version)
-		LOGFILE.write(_("Release Name: %s\n") % self.project_release)
-		LOGFILE.write(_("Release Codename: %s\n") % self.project_codename)
-		LOGFILE.write(_("Long Term Release: %s\n") % str(self.lts))
-		LOGFILE.write(_("Architecture: %s\n") % self.project_arch)
+		module_logger.debug(_("Project Name: %s") % self.project_name)
+		module_logger.debug(_("Version: %s") % self.project_version)
+		module_logger.debug(_("Release Name: %s") % self.project_release)
+		module_logger.debug(_("Release Codename: %s") % self.project_codename)
+		module_logger.debug(_("Long Term Release: %s") % str(self.lts))
+		module_logger.debug(_("Architecture: %s") % self.project_arch)
 		
 		self.project_path = os.getcwd()
 		listdirs = os.listdir(self.project_path)
 		for path in listdirs:
-			if path.startswith(self.project_name.lower()) and not path.endswith('.log'):
-				print(_("Old project exists in %s.") % path)
+			if path.startswith(self.project_name.lower()+'_iso_') and not path.endswith('.log'):
+				module_logger.debug(_("Old project exists in %s.") % path)
 				ans = input(_("Use %s as the project directory? ") % path)
 				if ans.lower() in 'yes':
 					self.project_dir = path
@@ -148,7 +155,7 @@ class LinuxIsoCreator():
 					ans = input(_("Delete the project directory %s? ") % path)
 					if ans.lower() in 'yes':
 						cmd = ['sudo', 'rm', '-rf', path]
-						subprocess.run(cmd, stdout=LOGFILE)
+						self.capture_subprocess_output(cmd)
 		else:
 			self.project_dir = self.project_name.lower()+"_iso_"+time_now
 		
@@ -158,25 +165,30 @@ class LinuxIsoCreator():
 		else:
 			self.volid = "%s %s %s" % (self.project_name, self.project_version, self.project_arch)
 		
-		LOGFILE.write(_("Project Directory: %s\n") % self.project_dir)
-		LOGFILE.write(_("ISO Filename: %s\n") % self.iso)
-		LOGFILE.write(_("Volume ID: %s\n") % self.volid)
+		module_logger.debug(_("Project Directory: %s") % self.project_dir)
+		module_logger.debug(_("ISO Filename: %s") % self.iso)
+		module_logger.debug(_("Volume ID: %s") % self.volid)
 		
 		self.rootfsdir = os.path.join(self.project_path, self.project_dir, "rootfs")
 		self.livecddir = os.path.join(self.project_path, self.project_dir, "tree")
 		os.makedirs(self.rootfsdir,exist_ok=True)
 		os.makedirs(self.livecddir,exist_ok=True)
+		
+		self.capture_subprocess_output(['sudo', 'chown', '-R', 'root:root', self.rootfsdir])
 	
 	def BootstrapRelease(self):
-		LOGFILE.write("# ========================Bootstrapping Release======================== #\n")
+		module_logger.debug("\n# ========================Bootstrapping Release======================== #")
 		cmd = ['sudo',
 			'debootstrap',
 			str('--arch=' + self.project_arch),
 			self.project_release,
 			self.rootfsdir]
 		try:
-			subprocess.run(cmd, stdout=LOGFILE)
-			LOGFILE.write("# ========================Bootstrapping complete======================== #\n")
+			self.capture_subprocess_output(cmd)
+			module_logger.debug("# ========================Bootstrapping complete======================== #\n")
+		except:
+			module_logger.debug("Bootstrapping failed.")
+			sys.exit(1)
 		except:
 			LOGFILE.write("Bootstrapping failed.")
 			sys.exit(1)
