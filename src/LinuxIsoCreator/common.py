@@ -134,6 +134,13 @@ class LinuxIsoCreator():
 		with open(LOGFILE, 'a+') as logger:
 			subprocess.run(cmd, stdout=logger, stderr=logger)
 	
+	# def prompt_sudo(self):
+	# 	ret = 0
+	# 	if os.geteuid() != 0:
+	# 		msg = "[sudo] password for %u:"
+	# 		ret = subprocess.check_call("sudo -v -p '%s'" % msg, shell=True)
+	# 	return ret
+
 	def set_iso_env(self):
 		module_logger.debug(_("Project Name: %s") % self.project_name)
 		module_logger.debug(_("Version: %s") % self.project_version)
@@ -185,12 +192,78 @@ class LinuxIsoCreator():
 			self.rootfsdir]
 		try:
 			self.capture_subprocess_output(cmd)
-			module_logger.debug("# ========================Bootstrapping complete======================== #\n")
+			module_logger.debug("# ========================Bootstrapping complete======================== #")
 		except:
 			module_logger.debug("Bootstrapping failed.")
 			sys.exit(1)
+	
+	def mount_dirs(self):
+		"""
+		Mounts or binds directories or filesystems
+		to rootfs required for logging and installation
+		of anything using the package desktop-base or grub
+		"""
+		mountflag = "Mounting"
+		
+		module_logger.debug("\n# ========================Mounting directories======================== #")
+		# bind /dev to rootfs/dev
+		mountfs = '/dev'
+		mountedpath = str(self.rootfsdir + mountfs)
+		cmd = ['sudo', 'mount', '-o', 'bind', mountfs, mountedpath]
+		self.run_mount_dirs(cmd, mountflag, mountfs)
+		
+		# mount /dev/pts to rootfs/dev/pts
+		mountfs = 'devpts'
+		mountedpath = str(self.rootfsdir + '/dev/pts')
+		cmd = ['sudo', 'mount', 'none', '-t', mountfs, mountedpath]
+		self.run_mount_dirs(cmd, mountflag, mountfs)
+		
+		# mount /proc to rootfs/proc
+		mountfs = 'proc'
+		mountedpath = str(self.rootfsdir + '/proc')
+		cmd = ['sudo', 'mount', 'none', '-t', mountfs, mountedpath]
+		self.run_mount_dirs(cmd, mountflag, mountfs)
+		
+		# mount /sys to rootfs/sys
+		mountfs = 'sysfs'
+		mountedpath = str(self.rootfsdir + '/sys')
+		cmd = ['sudo', 'mount', 'none', '-t', mountfs, mountedpath]
+		self.run_mount_dirs(cmd, mountflag, mountfs)
+		module_logger.debug("# ========================Mounting successful======================== #")
+	
+	def unmount_dirs(self):
+		"""
+		Unmounts directories or filesystems from rootfs.
+		"""
+		mountflag = "Unmounting"
+		
+		module_logger.debug("\n# ========================Unounting directories======================== #")
+		# Unmount rootfs/dev/pts
+		mountedpath = str(self.rootfsdir + '/dev/pts')
+		cmd = ['sudo', 'umount', mountedpath]
+		self.run_mount_dirs(cmd, mountflag, mountedpath)
+		
+		# Unmount rootfs/dev
+		mountedpath = str(self.rootfsdir + '/dev')
+		cmd = ['sudo', 'umount', mountedpath]
+		self.run_mount_dirs(cmd, mountflag, mountedpath)
+		
+		# Unmount rootfs/proc
+		mountedpath = str(self.rootfsdir + '/proc')
+		cmd = ['sudo', 'umount', mountedpath]
+		self.run_mount_dirs(cmd, mountflag, mountedpath)
+		
+		# Unmount rootfs/sys
+		mountedpath = str(self.rootfsdir + '/sys')
+		cmd = ['sudo', 'umount', mountedpath]
+		self.run_mount_dirs(cmd, mountflag, mountedpath)
+		module_logger.debug("# ========================Unounting successful======================== #")
+	
+	def run_mount_dirs(self, cmd, mountflag, mountfs=None):
+		try:
+			self.capture_subprocess_output(cmd)
 		except:
-			LOGFILE.write("Bootstrapping failed.")
+			module_logger.debug("%s %s failed." % (mountflag, mountfs))
 			sys.exit(1)
 	
 	def setuprootfs(self):
