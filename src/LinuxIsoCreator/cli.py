@@ -45,6 +45,12 @@ def start_LinISOtorCli():
 	if ans.lower() in 'yes':
 		iso_creator.BootstrapRelease()
 	
+	# mount directories
+	iso_creator.mount_dirs()
+	
+	# unmount directories
+	iso_creator.unmount_dirs()
+	
 	ans = input(_("Delete log file %s? ") % LOGFILE)
 	if ans.lower() in 'yes':
 		os.system("rm -f %s" % LOGFILE)
